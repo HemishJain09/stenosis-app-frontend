@@ -2,18 +2,31 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser, loading } = useAuth();
+interface ProtectedRouteProps {
+    children: React.ReactNode;
+}
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
-  }
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+    const { currentUser, isLoading } = useAuth();
 
-  if (!currentUser) {
-    return <Navigate to="/login" />;
-  }
+    // While the app is checking the user's authentication state, 
+    // display a loading message. This prevents a flicker or premature redirect.
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+                Loading...
+            </div>
+        );
+    }
 
-  return children;
+    // If the check is complete and there is no user, redirect to the login page.
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // If the check is complete and a user is logged in, render the requested component (e.g., the Dashboard).
+    return <>{children}</>;
 };
 
 export default ProtectedRoute;
+
