@@ -1,109 +1,131 @@
-import  { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Define the updated Case interface
 interface Case {
     id: string;
     patientName: string;
     status: string;
-    dicomFileUrl: string;
-    createdAt: string; // <-- Changed to string to match backend's ISO date format
+    modelReport?: string;
+    createdAt: { _seconds: number };
 }
 
 const DoctorDashboard = () => {
     const [cases, setCases] = useState<Case[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [reviewingCase, setReviewingCase] = useState<Case | null>(null);
-    const [findings, setFindings] = useState('');
-    
     const { currentUser } = useAuth();
+    
+    const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+    const [findings, setFindings] = useState('');
+    const [decision, setDecision] = useState('');
 
     useEffect(() => {
         const fetchCases = async () => {
-            if (!currentUser || !currentUser.token) return;
-
+            if (!currentUser?.token) return;
+            setIsLoading(true);
             try {
-                const response = await axios.get(`${API_URL}`, {
+                const response = await axios.get(`${API_URL}/cases`, {
                     headers: { Authorization: `Bearer ${currentUser.token}` }
                 });
-                setCases(response.data);
+                
+                if (Array.isArray(response.data)) {
+                    setCases(response.data);
+                } else {
+                    console.error("API did not return an array for cases:", response.data);
+                    setError('Received invalid data for case list.');
+                }
+
             } catch (err) {
-                setError('Failed to fetch cases.');
+                setError('Failed to fetch assigned cases.');
                 console.error(err);
             } finally {
                 setIsLoading(false);
             }
         };
         
-        if (currentUser?.token) {
-            fetchCases();
-        } else {
-            setIsLoading(false);
-        }
-    }, [currentUser]);
+        fetchCases();
+    }, [currentUser, cases]); 
 
-    const handleReviewSubmit = async (decision: 'confirmed' | 'rejected') => {
-        if (!reviewingCase || !currentUser?.token) return;
-        
+    const handleReviewSubmit = async () => {
+        if (!selectedCase || !decision) {
+            alert("Please select a decision.");
+            return;
+        };
         try {
-            await axios.put(`${API_URL}/cases/${reviewingCase.id}/review`, 
-                { decision, findings },
-                { headers: { Authorization: `Bearer ${currentUser.token}` } }
-            );
-            setCases(cases.filter(c => c.id !== reviewingCase.id));
-            setReviewingCase(null);
+            await axios.put(`${API_URL}/cases/${selectedCase.id}/review`, {
+                decision: decision,
+                findings: findings
+            }, {
+                headers: { Authorization: `Bearer ${currentUser?.token}` }
+            });
+            
+            setSelectedCase(null);
             setFindings('');
+            setDecision('');
         } catch (err) {
-            setError('Failed to submit review.');
+            alert('Failed to submit review.');
+            console.error(err);
         }
     };
-
+    
     if (isLoading) return <p className="text-white">Loading assigned cases...</p>;
     if (error) return <p className="text-red-500">{error}</p>;
-
-    if (reviewingCase) {
-        return (
-            <div className="w-full max-w-2xl p-8 space-y-4 bg-gray-800 rounded-lg">
-                <h3 className="text-2xl text-cyan-400">Review Case: {reviewingCase.patientName}</h3>
-                <p><a href={reviewingCase.dicomFileUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">View DICOM File</a></p>
-                <textarea 
-                    value={findings} 
-                    onChange={(e) => setFindings(e.target.value)}
-                    placeholder="Enter your findings here..."
-                    className="w-full h-32 p-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md"
-                />
-                <div className="flex justify-end space-x-4">
-                    <button onClick={() => setReviewingCase(null)} className="px-4 py-2 text-white bg-gray-600 rounded-md hover:bg-gray-700">Cancel</button>
-                    <button onClick={() => handleReviewSubmit('rejected')} className="px-4 py-2 text-white bg-yellow-600 rounded-md hover:bg-yellow-700">No Stenosis Found</button>
-                    <button onClick={() => handleReviewSubmit('confirmed')} className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700">Confirm Stenosis</button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="w-full max-w-4xl p-8 space-y-6 bg-gray-800 rounded-lg">
             <h2 className="text-3xl font-bold text-cyan-400">Assigned Cases</h2>
             {cases.length === 0 ? (
-                <p className="text-gray-400">No cases are currently assigned to you.</p>
+                <p className="text-gray-400">There are no cases in your queue.</p>
             ) : (
                 <div className="space-y-4">
                     {cases.map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-md">
-                            <div>
-                                <p className="font-semibold text-white">{c.patientName}</p>
-                                {/* Correctly parse the ISO date string */}
-                                <p className="text-sm text-gray-400">Received: {new Date(c.createdAt).toLocaleString()}</p>
+                        <div key={c.id} className="p-4 bg-gray-700 rounded-md">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-semibold text-white">{c.patientName}</p>
+                                    <p className="text-sm text-gray-400">Case from {new Date(c.createdAt._seconds * 1000).toLocaleDateString()}</p>
+                                </div>
+                                <button onClick={() => setSelectedCase(c)} className="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-md hover:bg-cyan-700">
+                                    Review Case
+                                </button>
                             </div>
-                            <button onClick={() => setReviewingCase(c)} className="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-md hover:bg-cyan-700">
-                                Review Case
-                            </button>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {selectedCase && (
+                <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-75">
+                    <div className="w-full max-w-lg p-6 bg-gray-800 rounded-lg shadow-xl">
+                        <h3 className="text-2xl font-bold text-white">Review Case: {selectedCase.patientName}</h3>
+                        <p className="mt-2 text-sm text-gray-400">{selectedCase.modelReport || "No AI report available."}</p>
+                        
+                        <textarea
+                            value={findings}
+                            onChange={(e) => setFindings(e.target.value)}
+                            placeholder="Enter your findings..."
+                            className="w-full h-32 px-3 py-2 mt-4 text-white bg-gray-700 border border-gray-600 rounded-md"
+                        />
+
+                        <div className="mt-4 space-y-2">
+                            <label className="flex items-center">
+                                <input type="radio" value="confirmed" checked={decision === 'confirmed'} onChange={() => setDecision('confirmed')} className="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600"/>
+                                <span className="ml-2 text-gray-300">Confirm Stenosis</span>
+                            </label>
+                            <label className="flex items-center">
+                                <input type="radio" value="rejected" checked={decision === 'rejected'} onChange={() => setDecision('rejected')} className="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600"/>
+                                <span className="ml-2 text-gray-300">No Stenosis Found</span>
+                            </label>
+                        </div>
+                        
+                        <div className="flex justify-end mt-6 space-x-4">
+                            <button onClick={() => setSelectedCase(null)} className="px-4 py-2 font-semibold text-gray-300 bg-gray-600 rounded-md hover:bg-gray-500">Cancel</button>
+                            <button onClick={handleReviewSubmit} className="px-4 py-2 font-semibold text-white bg-cyan-600 rounded-md hover:bg-cyan-700">Submit Review</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

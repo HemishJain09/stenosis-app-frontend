@@ -21,28 +21,28 @@ const ClinicDashboard = () => {
 
     useEffect(() => {
         const fetchPatients = async () => {
-            if (!currentUser?.token) {
-                setError("Authentication token not found. Cannot fetch patients.");
-                return;
-            }
+            if (!currentUser?.token) return;
             try {
-                const response = await axios.get(`${API_URL}`, {
+                const response = await axios.get(`${API_URL}/patients`, {
                     headers: { Authorization: `Bearer ${currentUser.token}` }
                 });
-                setPatients(response.data);
-                // Set the default selected patient if the list is not empty
-                if (response.data.length > 0) {
-                    setSelectedPatient(response.data[0].uid);
+                
+                if (Array.isArray(response.data)) {
+                    setPatients(response.data);
+                    if (response.data.length > 0) {
+                        setSelectedPatient(response.data[0].uid);
+                    }
+                } else {
+                    console.error("API did not return an array for patients:", response.data);
+                    setError('Received invalid data for patient list.');
                 }
+
             } catch (err) {
                 console.error("Failed to fetch patients:", err);
-                setError('Could not load the patient list. Please try again later.');
+                setError('Could not load patient list.');
             }
         };
-
-        if (currentUser) {
-            fetchPatients();
-        }
+        fetchPatients();
     }, [currentUser]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +75,7 @@ const ClinicDashboard = () => {
         formData.append('file', file);
 
         try {
-            await axios.post(`${API_URL}`, formData, {
+            await axios.post(`${API_URL}/cases`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${currentUser?.token}`
