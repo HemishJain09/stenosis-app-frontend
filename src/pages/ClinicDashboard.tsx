@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 interface Patient {
     uid: string;
     name: string;
@@ -24,7 +26,7 @@ const ClinicDashboard = () => {
                 return;
             }
             try {
-                const response = await axios.get('http://127.0.0.1:8000/patients', {
+                const response = await axios.get(`${API_URL}`, {
                     headers: { Authorization: `Bearer ${currentUser.token}` }
                 });
                 setPatients(response.data);
@@ -73,7 +75,7 @@ const ClinicDashboard = () => {
         formData.append('file', file);
 
         try {
-            await axios.post('http://127.0.0.1:8000/cases', formData, {
+            await axios.post(`${API_URL}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${currentUser?.token}`

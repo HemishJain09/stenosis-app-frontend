@@ -2,6 +2,8 @@ import  { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Define the updated Case interface
 interface Case {
     id: string;
@@ -25,7 +27,7 @@ const DoctorDashboard = () => {
             if (!currentUser || !currentUser.token) return;
 
             try {
-                const response = await axios.get('http://127.0.0.1:8000/cases', {
+                const response = await axios.get(`${API_URL}`, {
                     headers: { Authorization: `Bearer ${currentUser.token}` }
                 });
                 setCases(response.data);
@@ -48,7 +50,7 @@ const DoctorDashboard = () => {
         if (!reviewingCase || !currentUser?.token) return;
         
         try {
-            await axios.put(`http://127.0.0.1:8000/cases/${reviewingCase.id}/review`, 
+            await axios.put(`${API_URL}/cases/${reviewingCase.id}/review`, 
                 { decision, findings },
                 { headers: { Authorization: `Bearer ${currentUser.token}` } }
             );

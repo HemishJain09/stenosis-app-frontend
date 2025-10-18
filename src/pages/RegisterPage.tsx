@@ -4,6 +4,7 @@ import { auth } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const RegisterPage = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -22,7 +23,7 @@ const RegisterPage = () => {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            await axios.post('http://127.0.0.1:8000/register', {
+            await axios.post(`${API_URL}`, {
                 uid: user.uid,
                 name: name,
                 email: user.email,

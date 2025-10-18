@@ -2,6 +2,8 @@ import  { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Define the updated Case interface
 interface Case {
     id: string;
@@ -24,7 +26,7 @@ const PatientDashboard = () => {
                 return;
             }
             try {
-                const response = await axios.get('http://127.0.0.1:8000/my-cases', {
+                const response = await axios.get(`${API_URL}/my-cases`, {
                     headers: { Authorization: `Bearer ${currentUser.token}` }
                 });
                 setCases(response.data);
