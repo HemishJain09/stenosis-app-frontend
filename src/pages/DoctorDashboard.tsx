@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 interface Case {
     id: string;
@@ -24,7 +24,10 @@ const DoctorDashboard = () => {
 
     useEffect(() => {
         const fetchCases = async () => {
-            if (!currentUser?.token) return;
+            if (!currentUser?.token) {
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
                 const response = await axios.get(`${API_URL}/cases`, {
@@ -47,7 +50,7 @@ const DoctorDashboard = () => {
         };
         
         fetchCases();
-    }, [currentUser, cases]); 
+    }, [currentUser]); // <-- FIX: Removed 'cases' from the dependency array
 
     const handleReviewSubmit = async () => {
         if (!selectedCase || !decision) {
@@ -61,6 +64,10 @@ const DoctorDashboard = () => {
             }, {
                 headers: { Authorization: `Bearer ${currentUser?.token}` }
             });
+
+            // After submission, manually filter the case out of the local state
+            // to provide immediate UI feedback without a full refetch.
+            setCases(prevCases => prevCases.filter(c => c.id !== selectedCase.id));
             
             setSelectedCase(null);
             setFindings('');
@@ -101,7 +108,10 @@ const DoctorDashboard = () => {
                 <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-75">
                     <div className="w-full max-w-lg p-6 bg-gray-800 rounded-lg shadow-xl">
                         <h3 className="text-2xl font-bold text-white">Review Case: {selectedCase.patientName}</h3>
-                        <p className="mt-2 text-sm text-gray-400">{selectedCase.modelReport || "No AI report available."}</p>
+                        <div className="p-3 mt-4 text-sm text-gray-300 bg-gray-900 border-l-2 border-cyan-500">
+                            <p className="font-semibold">AI Model Report:</p>
+                            <p>{selectedCase.modelReport || "No AI report available."}</p>
+                        </div>
                         
                         <textarea
                             value={findings}
