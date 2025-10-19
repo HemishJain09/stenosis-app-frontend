@@ -9,6 +9,7 @@ interface Case {
     patientName: string;
     status: string;
     modelReport?: string;
+    dicomFileUrl?: string; // <-- Re-added the file URL
     createdAt: { _seconds: number };
 }
 
@@ -50,7 +51,7 @@ const DoctorDashboard = () => {
         };
         
         fetchCases();
-    }, [currentUser]); // <-- FIX: Removed 'cases' from the dependency array
+    }, [currentUser]);
 
     const handleReviewSubmit = async () => {
         if (!selectedCase || !decision) {
@@ -65,8 +66,6 @@ const DoctorDashboard = () => {
                 headers: { Authorization: `Bearer ${currentUser?.token}` }
             });
 
-            // After submission, manually filter the case out of the local state
-            // to provide immediate UI feedback without a full refetch.
             setCases(prevCases => prevCases.filter(c => c.id !== selectedCase.id));
             
             setSelectedCase(null);
@@ -106,8 +105,26 @@ const DoctorDashboard = () => {
 
             {selectedCase && (
                 <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-75">
-                    <div className="w-full max-w-lg p-6 bg-gray-800 rounded-lg shadow-xl">
+                    <div className="w-full max-w-lg p-6 bg-gray-800 rounded-lg shadow-xl overflow-y-auto max-h-screen">
                         <h3 className="text-2xl font-bold text-white">Review Case: {selectedCase.patientName}</h3>
+                        
+                        {/* --- NEW: Section to view the uploaded file --- */}
+                        <div className="mt-4">
+                            <p className="font-semibold text-gray-300">Angiography Scan:</p>
+                            {selectedCase.dicomFileUrl ? (
+                                <a 
+                                    href={selectedCase.dicomFileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-cyan-400 hover:underline break-all"
+                                >
+                                    View Uploaded File
+                                </a>
+                            ) : (
+                                <p className="text-gray-500">No file URL available for this case.</p>
+                            )}
+                        </div>
+
                         <div className="p-3 mt-4 text-sm text-gray-300 bg-gray-900 border-l-2 border-cyan-500">
                             <p className="font-semibold">AI Model Report:</p>
                             <p>{selectedCase.modelReport || "No AI report available."}</p>
