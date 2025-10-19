@@ -4,6 +4,14 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
+// --- NEW: Static credentials for quick login ---
+const credentials = {
+    clinic: { email: 'rahul.jain.090705@gmail.com', pass: 'Hemish@09' },
+    junior_doctor: { email: 'rydamjain01@gmail.com', pass: 'Rydam@09' },
+    senior_doctor: { email: '23ucc548@lnmiit.ac.in', pass: 'Hemish@09' },
+    patient: { email: 'hemishjain07@gmail.com', pass: 'Hemish@09' },
+};
+
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -12,9 +20,6 @@ const LoginPage = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
 
-    // This effect listens for a change in the authentication state.
-    // If a user logs in successfully, currentUser will be populated,
-    // and we can safely navigate to the dashboard.
     useEffect(() => {
         if (currentUser) {
             navigate('/dashboard');
@@ -25,8 +30,6 @@ const LoginPage = () => {
         setError('');
         setIsLoading(true);
 
-        // We only call the login function here. The useEffect above
-        // is responsible for handling the redirect.
         signInWithEmailAndPassword(auth, email, password)
             .catch((err) => {
                 setError("Failed to log in. Please check your credentials.");
@@ -35,6 +38,12 @@ const LoginPage = () => {
             .finally(() => {
                 setIsLoading(false);
             });
+    };
+
+    // --- NEW: Handler for quick login buttons ---
+    const handleQuickLogin = (role: keyof typeof credentials) => {
+        setEmail(credentials[role].email);
+        setPassword(credentials[role].pass);
     };
     
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -47,6 +56,21 @@ const LoginPage = () => {
         <div className="flex items-center justify-center min-h-screen bg-gray-900">
             <div className="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded-lg shadow-lg">
                 <h2 className="text-3xl font-bold text-center text-white">Login</h2>
+                
+                {/* --- NEW: Quick Login Buttons --- */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => handleQuickLogin('clinic')} className="py-2 text-sm font-semibold text-white bg-gray-600 rounded-md hover:bg-gray-500">Clinic</button>
+                    <button type="button" onClick={() => handleQuickLogin('junior_doctor')} className="py-2 text-sm font-semibold text-white bg-gray-600 rounded-md hover:bg-gray-500">Junior Doc</button>
+                    <button type="button" onClick={() => handleQuickLogin('senior_doctor')} className="py-2 text-sm font-semibold text-white bg-gray-600 rounded-md hover:bg-gray-500">Senior Doc</button>
+                    <button type="button" onClick={() => handleQuickLogin('patient')} className="py-2 text-sm font-semibold text-white bg-gray-600 rounded-md hover:bg-gray-500">Patient</button>
+                </div>
+
+                <div className="relative flex items-center py-2">
+                    <div className="flex-grow border-t border-gray-600"></div>
+                    <span className="flex-shrink px-4 text-xs text-gray-400 uppercase">Or Manually</span>
+                    <div className="flex-grow border-t border-gray-600"></div>
+                </div>
+
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                     <div>
                         <label className="block text-sm font-medium text-gray-300">Email Address</label>
